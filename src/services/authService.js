@@ -1,41 +1,36 @@
 // Authentication service
-import { API_BASE_URL } from './api';
+import { apiFetch } from './api';
+
+const TOKEN_KEY = 'authToken';
+const USER_KEY = 'authUser';
 
 /**
  * Login with email and password.
- * Falls back to mock for development.
  */
 export const loginAPI = async (credentials) => {
+    // Backend expects x-www-form-urlencoded for OAuth2PasswordRequestForm
+    const formData = new URLSearchParams();
+    formData.append('username', credentials.email);
+    formData.append('password', credentials.password);
+
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        const data = await apiFetch('/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(credentials),
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString(),
         });
-        const data = await response.json();
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || 'Invalid email or password');
-        }
-        return data;
+
+        return {
+            success: true,
+            token: data.access_token,
+            user: data.user
+        };
     } catch (err) {
-        // Mock: accept any non-empty credentials for dev
-        if (
-            credentials.email &&
-            credentials.password &&
-            credentials.password.length >= 6
-        ) {
-            return {
-                success: true,
-                token: 'mock_jwt_' + Date.now(),
-                user: {
-                    id: 'user_001',
-                    email: credentials.email,
-                    name: 'Admin User',
-                    role: 'admin',
-                },
-            };
-        }
-        throw new Error(err.message || 'Invalid email or password');
+        // Fallback or rethrow
+        console.error('Login error:', err);
+        throw err;
     }
 };
 
@@ -43,23 +38,15 @@ export const loginAPI = async (credentials) => {
  * Verify an existing token.
  */
 export const verifyToken = async (token) => {
+    // If we have an endpoint for this, use it. For now, we assume token is valid if it exists
+    // or we can call a GET /auth/me if implemented.
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/verify`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
+        const data = await apiFetch('/auth/me');
         return data;
     } catch {
-        // Mock: if token exists, treat as valid
-        if (token) {
-            return {
-                id: 'user_001',
-                email: 'admin@apcs.com',
-                name: 'Admin User',
-                role: 'admin',
-            };
-        }
-        throw new Error('Token invalid');
+        // Mock fallback if /auth/me doesn't exist yet
+        const storedUser = localStorage.getItem(USER_KEY);
+        return storedUser ? JSON.parse(storedUser) : null;
     }
 };
 
@@ -67,6 +54,6 @@ export const verifyToken = async (token) => {
  * Logout - clear stored token.
  */
 export const logoutAPI = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authUser');
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
 };

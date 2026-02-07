@@ -62,8 +62,28 @@ export const getSignals = async (category = 'All') => {
     try {
         const query = category !== 'All' ? `?category=${category}` : '';
         const data = await fetchData(`/signals${query}`);
-        return data;
-    } catch {
+
+        // Handle both array and object response from backend
+        const rawSignals = Array.isArray(data) ? data : (data.signals || []);
+
+        // Normalize backend data to match frontend component expectations
+        return {
+            signals: rawSignals.map(s => ({
+                id: s.id,
+                title: s.title,
+                category: s.opportunity?.primary_domain || 'Uncategorized',
+                system: s.source_name,
+                description: s.full_content || 'No description available.',
+                timestamp: new Date(s.date).toLocaleString(),
+                impactScore: s.opportunity?.impact_score || 0,
+                urgencyScore: s.opportunity?.urgency_score || 0,
+                status: s.is_processed ? 'Processed' : 'New',
+                sourceUrl: s.source_url
+            })),
+            total: rawSignals.length
+        };
+    } catch (err) {
+        console.warn('API fetch failed, falling back to mock data:', err);
         // Filter mock data locally for development
         if (category === 'All') return MOCK_SIGNALS;
         return {

@@ -11,6 +11,7 @@ export const useSignals = (category = 'All') => {
         setError(null);
         try {
             const result = await getSignals(category);
+            // After our normalization in services, it should always be { signals: [...] }
             setSignals(result.signals || []);
         } catch (err) {
             setError(err.message || 'Failed to fetch signals');
