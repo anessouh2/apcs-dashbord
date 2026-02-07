@@ -9,10 +9,12 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { useAuth } from "../../../context/AuthContext";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
 
   const menuItems = [
     {
@@ -73,7 +75,16 @@ const Sidebar = () => {
         <p className="section-title">General</p>
         <ul className="menu-list">
           {generalItems.map((item) => (
-            <li key={item.id} className="menu-item">
+            <li
+              key={item.id}
+              className="menu-item"
+              onClick={() => {
+                if (item.id === "logout") {
+                  logout();
+                  navigate("/login");
+                }
+              }}
+            >
               <span className="menu-icon">{item.icon}</span>
               <span className="menu-label">{item.label}</span>
             </li>
